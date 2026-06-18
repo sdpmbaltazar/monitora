@@ -1,0 +1,13 @@
+# Planilhas de dados (não versionar dados sensíveis)
+*.xlsx
+*.xls
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+*.swp

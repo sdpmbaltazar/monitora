@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Controle de Liquidações — PMBA 2026</title>
+  <meta name="description" content="Painel de controle e monitoramento de liquidações da Polícia Militar da Bahia, exercício 2026.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* ── DARK THEME (default) ── */
+    :root {
+      --bg-app: #0f1117;
+      --bg-card: #181b23;
+      --bg-card2: #1e2130;
+      --bg-hover: #232740;
+      --border: rgba(255,255,255,0.07);
+      --border-accent: rgba(55,138,221,0.3);
+      --text-primary: #e8eaf0;
+      --text-secondary: #8b92a8;
+      --text-tertiary: #5b6178;
+      --accent: #378ADD;
+      --accent-dark: #0C447C;
+      --accent-light: #E6F1FB;
+      --amber: #EF9F27;
+      --green: #4caf87;
+      --red: #e05a6b;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.35);
+      --topbar-bg: linear-gradient(135deg, #0d1a2d 0%, #13213a 100%);
+      --topbar-text: #e8eaf0;
+      --upload-bg: #181b23;
+      --chart-grid: rgba(255,255,255,0.06);
+      --chart-tick: rgba(139,146,168,1);
+      --scrollbar-thumb: rgba(255,255,255,0.12);
+      --scrollbar-hover: rgba(255,255,255,0.2);
+    }
+
+    /* ── LIGHT THEME ── */
+    html.light {
+      --bg-app: #f0f2f7;
+      --bg-card: #ffffff;
+      --bg-card2: #f5f7fb;
+      --bg-hover: #edf0f7;
+      --border: rgba(0,0,0,0.08);
+      --border-accent: rgba(55,138,221,0.25);
+      --text-primary: #1a1d2e;
+      --text-secondary: #4a5270;
+      --text-tertiary: #8892aa;
+      --accent: #2472c8;
+      --accent-dark: #0C447C;
+      --accent-light: #deeeff;
+      --amber: #d4830a;
+      --green: #2d8f68;
+      --red: #c93a4b;
+      --shadow: 0 4px 24px rgba(0,0,0,0.10);
+      --topbar-bg: linear-gradient(135deg, #1a3a6c 0%, #1e4d8c 100%);
+      --topbar-text: #ffffff;
+      --upload-bg: #ffffff;
+      --chart-grid: rgba(0,0,0,0.06);
+      --chart-tick: rgba(74,82,112,1);
+      --scrollbar-thumb: rgba(0,0,0,0.15);
+      --scrollbar-hover: rgba(0,0,0,0.25);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-app);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--border-accent);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      transition: background 0.3s ease;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .shield-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #185FA5);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(55,138,221,0.4);
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; color: #ffffff; }
+    .topbar-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+    .badge-pmba {
+      font-size: 10px; padding: 3px 9px; border-radius: 20px;
+      background: rgba(255,255,255,0.15); color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.25); font-weight: 500; letter-spacing: 0.3px;
+    }
+
+    /* ── THEME TOGGLE ── */
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .theme-toggle {
+      width: 44px; height: 24px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s ease, border-color 0.3s ease;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .theme-toggle:hover { background: rgba(255,255,255,0.25); }
+    .theme-toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #ffffff;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; line-height: 1;
+    }
+    html.light .theme-toggle-thumb { transform: translateX(20px); }
+    .theme-label {
+      font-size: 11px; color: rgba(255,255,255,0.7);
+      font-weight: 500; user-select: none;
+    }
+
+    /* ── UPLOAD ZONE ── */
+    #uploadZone {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: calc(100vh - 60px);
+      padding: 2rem;
+    }
+    .upload-card {
+      background: var(--bg-card);
+      border: 2px dashed rgba(55,138,221,0.3);
+      border-radius: var(--radius-lg);
+      padding: 3rem 4rem;
+      max-width: 560px; width: 100%;
+      text-align: center;
+      transition: border-color 0.2s, background 0.3s ease;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+    .upload-card:hover, .upload-card.drag-over {
+      border-color: var(--accent);
+      background: rgba(55,138,221,0.05);
+    }
+    .upload-icon { font-size: 52px; margin-bottom: 1rem; opacity: 0.7; }
+    .upload-title { font-size: 20px; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
+    .upload-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.5rem; }
+    .upload-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; padding: 10px 22px; border-radius: var(--radius-md);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .upload-btn:hover { background: #2b6db5; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(55,138,221,0.35); }
+    .upload-formats {
+      margin-top: 1.5rem; font-size: 11px; color: var(--text-tertiary);
+    }
+    .upload-formats strong { color: var(--text-secondary); }
+    #fileInput { display: none; }
+
+    /* loading bar */
+    #loadingBar {
+      display: none;
+      margin-top: 1.5rem;
+      width: 100%;
+    }
+    .load-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+    .load-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .load-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent), #a0cfff);
+      border-radius: 2px; animation: loadPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes loadPulse { 0%,100%{width:20%} 50%{width:80%} }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; padding: 1.5rem 2rem 2rem; }
+
+    /* header */
+    .dash-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;
+    }
+    .dash-header-left {}
+    .dash-title { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+    .dash-sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .dash-sub strong { color: var(--accent); }
+    .btn-upload-new {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.15); color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.25); padding: 7px 14px; border-radius: var(--radius-md);
+      font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-upload-new:hover { background: rgba(255,255,255,0.25); color: #ffffff; border-color: rgba(255,255,255,0.4); }
+
+    /* filter bar */
+    .filter-bar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 10px 14px;
+      margin-bottom: 1.25rem;
+    }
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .filter-bar label { font-size: 11px; color: var(--text-tertiary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .filter-bar select {
+      font-size: 12px; padding: 5px 10px; border-radius: var(--radius-sm);
+      background: var(--bg-card2); color: var(--text-primary);
+      border: 1px solid var(--border); height: 30px;
+      font-family: 'Inter', sans-serif; cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .filter-bar select:focus { outline: none; border-color: var(--accent); }
+    .filter-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+    .btn-reset {
+      font-size: 11px; padding: 4px 10px; border-radius: var(--radius-sm);
+      background: transparent; color: var(--text-tertiary);
+      border: 1px solid var(--border); cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .btn-reset:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+
+    /* metrics */
+    .metrics {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px; margin-bottom: 1.25rem;
+    }
+    .metric-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 1rem 1.1rem;
+      transition: border-color 0.2s, transform 0.15s;
+      position: relative; overflow: hidden;
+    }
+    .metric-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: transparent; border-radius: 3px 3px 0 0;
+      transition: background 0.2s;
+    }
+    .metric-card:hover { border-color: rgba(55,138,221,0.25); transform: translateY(-1px); }
+    .metric-card.accent { background: linear-gradient(135deg, rgba(55,138,221,0.12) 0%, rgba(24,95,165,0.08) 100%); border-color: rgba(55,138,221,0.25); }
+    .metric-card.accent::before { background: linear-gradient(90deg, var(--accent), #185FA5); }
+    .metric-card.green { border-color: rgba(76,175,135,0.25); }
+    .metric-card.green::before { background: var(--green); }
+    .metric-card.amber { border-color: rgba(239,159,39,0.25); }
+    .metric-card.amber::before { background: var(--amber); }
+    .metric-icon { font-size: 18px; margin-bottom: 6px; opacity: 0.7; }
+    .metric-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .metric-value { font-size: 21px; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+    .metric-card.accent .metric-value { color: var(--accent); }
+    html.light .metric-card.accent .metric-value { color: #1a5fb4; }
+    .metric-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+    /* card + chart transitions */
+    .metric-card, .chart-card, .table-card, .filter-bar,
+    .filter-bar select, .search-bar input, .btn-page, .btn-reset { transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease; }
+
+    /* charts */
+    .charts-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin-bottom: 1.25rem;
+    }
+    .chart-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.1rem;
+      transition: border-color 0.2s;
+    }
+    .chart-card:hover { border-color: rgba(255,255,255,0.12); }
+    .chart-card.full { grid-column: 1/-1; }
+    .chart-title {
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.85rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chart-title-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+    .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* tables */
+    .table-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.1rem;
+      margin-bottom: 1.25rem; overflow: hidden;
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.85rem;
+    }
+    .table-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-count { font-size: 11px; color: var(--text-tertiary); }
+    .table-wrap { overflow-x: auto; }
+    table.dt {
+      width: 100%; font-size: 12px; border-collapse: collapse;
+    }
+    table.dt th {
+      font-weight: 500; color: var(--text-tertiary); text-align: left;
+      padding: 6px 10px; border-bottom: 1px solid var(--border);
+      font-size: 11px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    table.dt td {
+      padding: 7px 10px; color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s ease;
+    }
+    table.dt tr:last-child td { border-bottom: none; }
+    table.dt tr:hover td { background: var(--bg-hover); }
+    .bar-cell { display: flex; align-items: center; gap: 7px; }
+    .bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; min-width: 50px; }
+    .bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #a0cfff); }
+    .tipo-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+    .tipo-contrato { background: rgba(76,175,135,0.18); color: #6fcca8; border: 1px solid rgba(76,175,135,0.25); }
+    .tipo-ac { background: rgba(239,159,39,0.15); color: #f0b74a; border: 1px solid rgba(239,159,39,0.25); }
+    .tipo-oes { background: rgba(200,100,200,0.15); color: #d898d8; border: 1px solid rgba(200,100,200,0.25); }
+    .rank-num { color: var(--text-tertiary); font-size: 11px; font-weight: 600; min-width: 20px; }
+
+    /* record search */
+    .search-bar {
+      display: flex; gap: 8px; align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .search-bar input {
+      flex: 1; font-size: 12px; padding: 6px 12px;
+      background: var(--bg-card2); color: var(--text-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s;
+    }
+    .search-bar input::placeholder { color: var(--text-tertiary); }
+    .search-bar input:focus { outline: none; border-color: var(--accent); }
+    .btn-page {
+      padding: 5px 10px; border-radius: var(--radius-sm);
+      background: var(--bg-card2); color: var(--text-secondary);
+      border: 1px solid var(--border); cursor: pointer; font-size: 12px;
+      font-family: 'Inter', sans-serif; transition: all 0.2s;
+    }
+    .btn-page:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+    .page-info { font-size: 11px; color: var(--text-tertiary); padding: 0 4px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; transition: background 0.3s; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+    /* responsive */
+    @media (max-width: 700px) {
+      .topbar { padding: 0 1rem; }
+      #dashboard { padding: 1rem; }
+      .charts-row { grid-template-columns: 1fr; }
+      .charts-row .chart-card.full { grid-column: 1; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* animations */
+    .fade-in { animation: fadeIn 0.4s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* alert */
+    .alert {
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      font-size: 12px; margin-top: 1rem; display: none;
+    }
+    .alert.error { background: rgba(224,90,107,0.15); border: 1px solid rgba(224,90,107,0.3); color: #f09099; }
+
+    /* ── ACTIVE FILTER CHIPS ── */
+    #activeChips {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      margin-bottom: 0.75rem; min-height: 0;
+    }
+    #activeChips:empty { display: none; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 500; padding: 3px 10px 3px 10px;
+      border-radius: 20px; cursor: pointer;
+      background: rgba(55,138,221,0.18); color: var(--accent);
+      border: 1px solid rgba(55,138,221,0.35);
+      transition: all 0.15s ease; user-select: none;
+      animation: chipIn 0.2s ease forwards;
+    }
+    @keyframes chipIn { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+    .chip:hover { background: rgba(55,138,221,0.3); transform: scale(1.04); }
+    .chip-x { font-size: 13px; line-height: 1; opacity: 0.7; margin-left: 2px; }
+    .chip-label { font-size: 9px; opacity: 0.7; font-weight: 400; margin-right: 1px; }
+    /* clickable chart cursor */
+    canvas { cursor: pointer; }
+    /* chart card click-hint */
+    .chart-hint {
+      font-size: 10px; color: var(--text-tertiary); margin-bottom: 6px;
+      display: flex; align-items: center; gap: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="shield-icon">🛡️</div>
+    <div>
+      <div class="topbar-title">Painel de Controle de Liquidações</div>
+      <div class="topbar-sub">Polícia Militar da Bahia — Exercício 2026</div>
+    </div>
+    <span class="badge-pmba">PMBA</span>
+  </div>
+  <div class="topbar-right">
+    <span class="theme-label" id="themeLabel">🌙 Dark</span>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Alternar tema">
+      <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+    </button>
+    <div id="headerActions" style="display:none;">
+      <button class="btn-upload-new" onclick="resetApp()" id="btnNew">
+        📂 Novo arquivo
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- UPLOAD ZONE -->
+<div id="uploadZone">
+  <div class="upload-card" id="dropArea"
+    ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)"
+    onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📊</div>
+    <div class="upload-title">Carregar Planilha de Controle</div>
+    <div class="upload-sub">Arraste e solte o arquivo Excel ou clique para selecionar</div>
+    <button class="upload-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+      📁 Selecionar arquivo
+    </button>
+    <div class="upload-formats">
+      Formatos aceitos: <strong>.xlsx, .xls</strong> · Planilha: <strong>Controle</strong>
+    </div>
+    <div id="loadingBar">
+      <div class="load-label">Processando dados…</div>
+      <div class="load-track"><div class="load-fill"></div></div>
+    </div>
+    <div class="alert error" id="uploadError"></div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+
+<!-- DASHBOARD -->
+<main id="dashboard">
+
+  <!-- Header -->
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <div class="dash-title">Painel de Controle de Liquidações</div>
+      <div class="dash-sub" id="dashSub">Exercício 2026 · Planilha Controle · <strong id="totalLiq">0</strong> liquidações</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Mês</label>
+      <select id="selMes" onchange="updateAll()">
+        <option value="all">Todos</option>
+      </select>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <label>Tipo</label>
+      <select id="selTipo" onchange="updateAll()">
+        <option value="all">Todos</option>
+      </select>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <label>Grupo</label>
+      <select id="selGrupo" onchange="updateAll()">
+        <option value="all">Todos</option>
+      </select>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
+      <label>UG</label>
+      <select id="selUG" onchange="updateAll()">
+        <option value="all">Todas</option>
+      </select>
+    </div>
+    <div class="filter-sep"></div>
+    <button class="btn-reset" onclick="resetFilters()">↺ Limpar filtros</button>
+  </div>
+  <!-- Active filter chips (populated by JS) -->
+  <div id="activeChips"></div>
+
+  <!-- Metrics -->
+  <div class="metrics" id="metricsRow"></div>
+
+  <!-- Charts row 1 -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-dot" style="background:var(--accent)"></span>
+        Liquidações por mês (R$)
+      </div>
+      <div class="chart-hint">👆 Clique numa barra para filtrar por mês</div>
+      <div class="legend" id="leg1"></div>
+      <div style="position:relative;height:190px"><canvas id="chartMes"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">
+        <span class="chart-title-dot" style="background:var(--amber)"></span>
+        Tipo de instrumento
+      </div>
+      <div class="chart-hint">👆 Clique numa fatia para filtrar por tipo</div>
+      <div class="legend" id="leg2"></div>
+      <div style="position:relative;height:190px"><canvas id="chartTipo"></canvas></div>
+    </div>
+    <div class="chart-card full">
+      <div class="chart-title">
+        <span class="chart-title-dot" style="background:var(--green)"></span>
+        Top 10 unidades gestoras — valor liquidado (R$)
+      </div>
+      <div class="chart-hint">👆 Clique numa barra para filtrar por unidade gestora</div>
+      <div style="position:relative;height:310px"><canvas id="chartUG"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Grupo por elemento -->
+  <div class="chart-card" style="margin-bottom:1.25rem">
+    <div class="chart-title">
+      <span class="chart-title-dot" style="background:#a78bfa"></span>
+      Distribuição mensal por tipo de instrumento (R$)
+    </div>
+    <div class="chart-hint">👆 Clique numa barra para filtrar por mês + tipo</div>
+    <div style="position:relative;height:210px"><canvas id="chartMesTipo"></canvas></div>
+  </div>
+
+  <!-- Top credores -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">🏆 Top 20 credores</span>
+      <span class="table-count" id="tableCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="dt" id="credorTable">
+        <thead><tr>
+          <th>#</th><th>Credor</th><th>CPF/CNPJ</th><th>Tipo</th>
+          <th>Valor liquidado</th><th>% do total</th><th>Participação</th>
+        </tr></thead>
+        <tbody id="credorBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Grupo de despesa -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">📋 Distribuição por grupo e elemento de despesa</span>
+    </div>
+    <div class="table-wrap">
+      <table class="dt" id="grupoTable">
+        <thead><tr>
+          <th>Grupo de despesa</th><th>Elemento</th><th>Qtd. liq.</th>
+          <th>Valor total (R$)</th><th>% do total</th>
+        </tr></thead>
+        <tbody id="grupoBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tabela de registros -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">🗂️ Registros de liquidação</span>
+      <span class="table-count" id="recCount"></span>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Pesquisar credor, UG, histórico…" oninput="renderRecords()">
+      <button class="btn-page" id="btnPrev" onclick="changePage(-1)">◀</button>
+      <span class="page-info" id="pageInfo"></span>
+      <button class="btn-page" id="btnNext" onclick="changePage(1)">▶</button>
+    </div>
+    <div class="table-wrap">
+      <table class="dt" id="recTable">
+        <thead><tr>
+          <th>Mês</th><th>Data LIQ</th><th>N° LIQ</th><th>UG</th>
+          <th>Credor</th><th>Tipo</th><th>Grupo</th><th>Elemento</th>
+          <th>Histórico</th><th style="text-align:right">Valor LIQ</th>
+        </tr></thead>
+        <tbody id="recBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+// GLOBALS
+// ─────────────────────────────────────────────
+let RAW = [];
+let charts = {};
+let recPage = 1;
+const REC_PER_PAGE = 50;
+
+const MONTHS = {1:'Jan',2:'Fev',3:'Mar',4:'Abr',5:'Mai',6:'Jun',7:'Jul',8:'Ago',9:'Set',10:'Out',11:'Nov',12:'Dez'};
+
+// Column indices in the "Controle" sheet (0-based)
+const COL = {
+  proj: 0, exercicio: 1, uo: 2, nomeUO: 3, ug: 4, nomeUG: 5,
+  numLIQ: 6, numEMP: 7, numSEI: 8, numInstrumento: 9, tipoInstrumento: 10,
+  dotacao: 11, grupoDespesa: 12, elementoDespesa: 13, tipoGasto: 14,
+  historico: 15, dataLIQ: 16, valorLIQ: 17, valorConsig: 18,
+  credorPrincipal: 19, nomeCredor: 20, cpfCnpj: 21, formaReceb: 22,
+  numPED: 23, mes: 24, conjunt: 25, unidMed: 26, quant: 27,
+  valorUnit: 28, valorTotal: 29, natureza: 30, dr: 31, obs: 32
+};
+
+// ─────────────────────────────────────────────
+// DRAG & DROP UPLOAD
+// ─────────────────────────────────────────────
+function dragOver(e) { e.preventDefault(); document.getElementById('dropArea').classList.add('drag-over'); }
+function dragLeave(e) { document.getElementById('dropArea').classList.remove('drag-over'); }
+function dropFile(e) {
+  e.preventDefault();
+  document.getElementById('dropArea').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls'].includes(ext)) {
+    showError('Formato inválido. Use arquivos .xlsx ou .xls');
+    return;
+  }
+  showError('');
+  document.getElementById('loadingBar').style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      // Find "Controle" sheet (case-insensitive)
+      const sheetName = wb.SheetNames.find(n => n.toLowerCase().includes('controle')) || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      parseData(json, sheetName, file.name);
+    } catch(err) {
+      document.getElementById('loadingBar').style.display = 'none';
+      showError('Erro ao processar o arquivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// PARSE DATA
+// ─────────────────────────────────────────────
+function parseData(rows, sheetName, fileName) {
+  if (!rows || rows.length < 2) {
+    document.getElementById('loadingBar').style.display = 'none';
+    showError('Planilha vazia ou sem dados válidos.');
+    return;
+  }
+
+  // Detect header row (first row with "Mês" or "Valor LIQ")
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, rows.length); i++) {
+    const r = rows[i];
+    if (r && r.some(c => typeof c === 'string' && (c.toLowerCase().includes('valor liq') || c.toLowerCase().includes('credor')))) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const headers = (rows[headerIdx] || []).map(h => (h || '').toString().trim().toLowerCase());
+  
+  // Map column names dynamically
+  const colMap = {};
+  const targets = {
+    mes: ['mês', 'mes'],
+    nomeUG: ['nome da unidade gestora'],
+    tipoInstrumento: ['tipo do instrumento'],
+    grupoDespesa: ['código e descrição do grupo de despesa', 'codigo e descricao do grupo de despesa'],
+    elementoDespesa: ['código e descrição do elemento de despesa', 'codigo e descricao do elemento de despesa'],
+    valorLIQ: ['valor liq', 'valor líq', 'valor liquidado'],
+    nomeCredor: ['nome do credor'],
+    cpfCnpj: ['cpf/cnpj'],
+    numLIQ: ['n° liq', 'nº liq', 'no liq', 'num liq', 'n liq'],
+    dataLIQ: ['data da liq', 'data liq'],
+    historico: ['histórico/objeto', 'historico/objeto', 'histórico', 'historico']
+  };
+
+  for (const [key, aliases] of Object.entries(targets)) {
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i].replace(/[\r\n]+/g,' ').trim();
+      if (aliases.some(a => h === a || h.includes(a))) {
+        colMap[key] = i; break;
+      }
+    }
+  }
+
+  // Fallback to fixed positions
+  const fallback = { mes:24, nomeUG:5, tipoInstrumento:10, grupoDespesa:12, elementoDespesa:13, valorLIQ:17, nomeCredor:20, cpfCnpj:21, numLIQ:6, dataLIQ:16, historico:15 };
+  for (const [key, idx] of Object.entries(fallback)) {
+    if (colMap[key] === undefined) colMap[key] = idx;
+  }
+
+  RAW = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(c => c === null || c === undefined || c === '')) continue;
+    const valorRaw = r[colMap.valorLIQ];
+    const valor = parseFloat((valorRaw ?? '0').toString().replace(',','.')) || 0;
+    const mesRaw = r[colMap.mes];
+    let mes = parseInt(mesRaw) || 0;
+    if (!mes && r[colMap.dataLIQ]) {
+      const d = parseDate(r[colMap.dataLIQ]);
+      if (d) mes = d.getMonth() + 1;
+    }
+
+    // Extract group code
+    const grupoRaw = (r[colMap.grupoDespesa] || '').toString();
+    const grupoCode = grupoRaw.match(/^(\d+)/)?.[1] || '';
+    const elemRaw = (r[colMap.elementoDespesa] || '').toString();
+    const elemCode = elemRaw.match(/^(\d+)/)?.[1] || '';
+
+    let tipoInstr = (r[colMap.tipoInstrumento] || '').toString().trim();
+    // Normalize Autorização
+    if (tipoInstr.includes('Autoriza')) tipoInstr = 'Autorização de Compra';
+
+    RAW.push({
+      mes,
+      nomeUG: (r[colMap.nomeUG] || '').toString().trim(),
+      tipo: tipoInstr,
+      grupoCod: grupoCode,
+      grupoDesc: grupoRaw.trim(),
+      elemCod: elemCode,
+      elemDesc: elemRaw.trim(),
+      valor,
+      nomeCredor: (r[colMap.nomeCredor] || '').toString().trim(),
+      cpfCnpj: (r[colMap.cpfCnpj] || '').toString().trim(),
+      numLIQ: (r[colMap.numLIQ] || '').toString().trim(),
+      dataLIQ: r[colMap.dataLIQ] ? formatDate(parseDate(r[colMap.dataLIQ])) : '',
+      historico: (r[colMap.historico] || '').toString().trim(),
+    });
+  }
+
+  document.getElementById('loadingBar').style.display = 'none';
+  if (RAW.length === 0) {
+    showError('Nenhum registro encontrado na planilha "Controle".');
+    return;
+  }
+
+  // Build filters
+  buildFilters();
+  document.getElementById('totalLiq').textContent = RAW.length.toLocaleString('pt-BR');
+  document.getElementById('dashSub').innerHTML = `Arquivo: <strong>${fileName}</strong> · Planilha: <strong>${sheetName}</strong> · <strong id="totalLiq">${RAW.length.toLocaleString('pt-BR')}</strong> registros`;
+
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('headerActions').style.display = 'flex';
+  document.getElementById('dashboard').classList.add('fade-in');
+
+  updateAll();
+}
+
+function parseDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') {
+    // Excel serial date
+    const d = new Date((val - 25569) * 86400 * 1000);
+    return d;
+  }
+  if (typeof val === 'string') {
+    // Try dd/mm/yyyy
+    const m = val.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+    return new Date(val);
+  }
+  return null;
+}
+
+function formatDate(d) {
+  if (!d || isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR');
+}
+
+// ─────────────────────────────────────────────
+// BUILD FILTER OPTIONS
+// ─────────────────────────────────────────────
+function buildFilters() {
+  const meses = [...new Set(RAW.map(r=>r.mes).filter(Boolean))].sort((a,b)=>a-b);
+  const tipos = [...new Set(RAW.map(r=>r.tipo).filter(Boolean))].sort();
+  const grupos = [...new Set(RAW.map(r=>r.grupoDesc).filter(Boolean))].sort();
+  const ugs = [...new Set(RAW.map(r=>r.nomeUG).filter(Boolean))].sort();
+
+  const selMes = document.getElementById('selMes');
+  selMes.innerHTML = '<option value="all">Todos</option>';
+  meses.forEach(m => selMes.insertAdjacentHTML('beforeend', `<option value="${m}">${MONTHS[m]||m}</option>`));
+
+  const selTipo = document.getElementById('selTipo');
+  selTipo.innerHTML = '<option value="all">Todos</option>';
+  tipos.forEach(t => selTipo.insertAdjacentHTML('beforeend', `<option value="${t}">${t}</option>`));
+
+  const selGrupo = document.getElementById('selGrupo');
+  selGrupo.innerHTML = '<option value="all">Todos</option>';
+  grupos.forEach(g => selGrupo.insertAdjacentHTML('beforeend', `<option value="${g}">${g}</option>`));
+
+  const selUG = document.getElementById('selUG');
+  selUG.innerHTML = '<option value="all">Todas</option>';
+  ugs.forEach(u => selUG.insertAdjacentHTML('beforeend', `<option value="${u}">${u}</option>`));
+}
+
+function resetFilters() {
+  ['selMes','selTipo','selGrupo','selUG'].forEach(id => document.getElementById(id).value = 'all');
+  document.getElementById('searchInput').value = '';
+  updateAll();
+}
+
+// ─────────────────────────────────────────────
+// FILTER
+// ─────────────────────────────────────────────
+function getFilters() {
+  return {
+    mes: document.getElementById('selMes').value,
+    tipo: document.getElementById('selTipo').value,
+    grupo: document.getElementById('selGrupo').value,
+    ug: document.getElementById('selUG').value,
+  };
+}
+
+function filtered(data) {
+  data = data || RAW;
+  const f = getFilters();
+  return data.filter(r => {
+    if (f.mes !== 'all' && String(r.mes) !== f.mes) return false;
+    if (f.tipo !== 'all' && r.tipo !== f.tipo) return false;
+    if (f.grupo !== 'all' && r.grupoDesc !== f.grupo) return false;
+    if (f.ug !== 'all' && r.nomeUG !== f.ug) return false;
+    return true;
+  });
+}
+
+// ─────────────────────────────────────────────
+// FORMATTERS
+// ─────────────────────────────────────────────
+function fmt(v) { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v); }
+function fmtShort(v) {
+  if (v >= 1e9) return 'R$ '+(v/1e9).toFixed(2)+'B';
+  if (v >= 1e6) return 'R$ '+(v/1e6).toFixed(2)+'M';
+  if (v >= 1e3) return 'R$ '+(v/1e3).toFixed(0)+'K';
+  return fmt(v);
+}
+
+// ─────────────────────────────────────────────
+// METRICS
+// ─────────────────────────────────────────────
+function updateMetrics(data) {
+  const grand = data.reduce((s,r) => s + r.valor, 0);
+  const contratoV = data.filter(r=>r.tipo==='Contrato').reduce((s,r)=>s+r.valor,0);
+  const acV = data.filter(r=>r.tipo.includes('Autoriza')).reduce((s,r)=>s+r.valor,0);
+  const investV = data.filter(r=>r.grupoCod==='04').reduce((s,r)=>s+r.valor,0);
+  const corrV = data.filter(r=>r.grupoCod==='03').reduce((s,r)=>s+r.valor,0);
+  const numUGs = new Set(data.map(r=>r.nomeUG).filter(Boolean)).size;
+  const numCredores = new Set(data.map(r=>r.nomeCredor).filter(Boolean)).size;
+
+  document.getElementById('metricsRow').innerHTML = `
+    <div class="metric-card accent">
+      <div class="metric-icon">💰</div>
+      <div class="metric-label">Total liquidado</div>
+      <div class="metric-value">${fmtShort(grand)}</div>
+      <div class="metric-sub">${data.length.toLocaleString('pt-BR')} registros</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">📄</div>
+      <div class="metric-label">Contratos</div>
+      <div class="metric-value">${fmtShort(contratoV)}</div>
+      <div class="metric-sub">${grand?((contratoV/grand)*100).toFixed(1):0}% do total</div>
+    </div>
+    <div class="metric-card amber">
+      <div class="metric-icon">🛒</div>
+      <div class="metric-label">Aut. de Compra</div>
+      <div class="metric-value">${fmtShort(acV)}</div>
+      <div class="metric-sub">${grand?((acV/grand)*100).toFixed(1):0}% do total</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-icon">🏗️</div>
+      <div class="metric-label">Investimentos</div>
+      <div class="metric-value">${fmtShort(investV)}</div>
+      <div class="metric-sub">Grupo 04</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">📝</div>
+      <div class="metric-label">Desp. Correntes</div>
+      <div class="metric-value">${fmtShort(corrV)}</div>
+      <div class="metric-sub">Grupo 03</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">🏢</div>
+      <div class="metric-label">Unid. Gestoras</div>
+      <div class="metric-value">${numUGs}</div>
+      <div class="metric-sub">unidades com registros</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">👥</div>
+      <div class="metric-label">Credores</div>
+      <div class="metric-value">${numCredores}</div>
+      <div class="metric-sub">credores distintos</div>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function chartDefaults() {
+  const isLight = document.documentElement.classList.contains('light');
+  return {
+    color: isLight ? 'rgba(74,82,112,1)' : 'rgba(139,146,168,1)',
+    gridColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+    tickFont: { family: 'Inter', size: 11 }
+  };
+}
+
+// ─────────────────────────────────────────────
+// ACTIVE CHIPS (filter pills above charts)
+// ─────────────────────────────────────────────
+const CHIP_LABELS = { selMes: 'Mês', selTipo: 'Tipo', selGrupo: 'Grupo', selUG: 'UG' };
+
+function renderChips() {
+  const container = document.getElementById('activeChips');
+  if (!container) return;
+  const ids = ['selMes','selTipo','selGrupo','selUG'];
+  container.innerHTML = ids.map(id => {
+    const sel = document.getElementById(id);
+    if (!sel || sel.value === 'all') return '';
+    const display = sel.options[sel.selectedIndex].text;
+    return `<span class="chip" onclick="clearFilter('${id}')">
+      <span class="chip-label">${CHIP_LABELS[id]}:</span>
+      ${display}
+      <span class="chip-x">×</span>
+    </span>`;
+  }).join('');
+}
+
+function clearFilter(id) {
+  document.getElementById(id).value = 'all';
+  updateAll();
+}
+
+// Helper: set a filter and update
+function applyFilter(selectId, value) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  // Toggle: clicking the already-selected value removes the filter
+  sel.value = (sel.value === String(value)) ? 'all' : String(value);
+  updateAll();
+}
+
+// ─────────────────────────────────────────────
+// CHART: LIQUIDACOES POR MES
+// ─────────────────────────────────────────────
+function updateChartMes(data) {
+  destroyChart('mes');
+  const mesFilter = document.getElementById('selMes').value;
+  // Always aggregate from full RAW for axis, highlight filtered
+  const mesSumsAll = {};
+  RAW.forEach(r => { if(r.mes) mesSumsAll[r.mes] = (mesSumsAll[r.mes]||0) + r.valor; });
+  const mesSumsFiltered = {};
+  data.forEach(r => { if(r.mes) mesSumsFiltered[r.mes] = (mesSumsFiltered[r.mes]||0) + r.valor; });
+  const sortedMes = Object.keys(mesSumsAll).map(Number).sort((a,b)=>a-b);
+  const labels = sortedMes.map(m => MONTHS[m]||m);
+  const vals = sortedMes.map(m => mesSumsFiltered[m] || 0);
+
+  const isLight = document.documentElement.classList.contains('light');
+  const accentColor = isLight ? '#2472c8' : '#378ADD';
+  const dimColor    = isLight ? 'rgba(147,184,224,0.35)' : 'rgba(42,74,112,0.5)';
+  const selColor    = isLight ? '#1a5fb4' : '#a0d4ff';
+  const bgColors = sortedMes.map(m => {
+    if (mesFilter !== 'all') return +mesFilter === m ? selColor : dimColor;
+    return accentColor;
+  });
+
+  const CD = chartDefaults();
+  document.getElementById('leg1').innerHTML = `<div class="leg-item"><span class="leg-dot" style="background:${accentColor}"></span>Valor liquidado — clique para filtrar</div>`;
+  charts.mes = new Chart(document.getElementById('chartMes'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: vals, backgroundColor: bgColors, borderRadius: 5, borderSkipped: false, hoverBackgroundColor: selColor }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      onClick(evt, elements) {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const m = sortedMes[idx];
+        applyFilter('selMes', m);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => fmt(c.parsed.y), title: t => { const m = sortedMes[t[0].dataIndex]; return (MONTHS[m]||m) + (mesFilter !== 'all' && +mesFilter === m ? ' ✓ Ativo' : ''); } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: CD.color, font: CD.tickFont } },
+        y: { ticks: { callback: v => fmtShort(v), color: CD.color, font: CD.tickFont }, grid: { color: CD.gridColor } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// CHART: TIPO DE INSTRUMENTO
+// ─────────────────────────────────────────────
+function updateChartTipo(data) {
+  destroyChart('tipo');
+  const tipoFilter = document.getElementById('selTipo').value;
+  const tipoSumsAll = {};
+  RAW.forEach(r => { if(r.tipo) tipoSumsAll[r.tipo] = (tipoSumsAll[r.tipo]||0) + r.valor; });
+  const labels = Object.keys(tipoSumsAll);
+  const tipoSumsFiltered = {};
+  data.forEach(r => { if(r.tipo) tipoSumsFiltered[r.tipo] = (tipoSumsFiltered[r.tipo]||0) + r.valor; });
+  const vals = labels.map(l => tipoSumsFiltered[l] || 0);
+  const palette = ['#378ADD','#EF9F27','#a78bfa','#4caf87','#e05a6b'];
+  const colors = labels.map((l,i) => {
+    const base = palette[i % palette.length];
+    if (tipoFilter !== 'all' && tipoFilter !== l) return base + '44'; // dimmed
+    return base;
+  });
+  const offsets = labels.map(l => tipoFilter !== 'all' && tipoFilter === l ? 8 : 0);
+
+  document.getElementById('leg2').innerHTML = labels.map((l,i) =>
+    `<div class="leg-item" style="cursor:pointer;opacity:${tipoFilter!=='all'&&tipoFilter!==l?'0.45':'1'}" onclick="applyFilter('selTipo','${l}')">
+      <span class="leg-dot" style="background:${palette[i%palette.length]}"></span>${l} — ${fmtShort(tipoSumsFiltered[l]||0)}
+    </div>`
+  ).join('');
+
+  charts.tipo = new Chart(document.getElementById('chartTipo'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0, hoverOffset: 10, offset: offsets }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      onClick(evt, elements) {
+        if (!elements.length) return;
+        const label = labels[elements[0].index];
+        applyFilter('selTipo', label);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => fmt(c.parsed), title: t => labels[t[0].dataIndex] + (tipoFilter === labels[t[0].dataIndex] ? ' ✓ Ativo' : '') } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// CHART: TOP UG
+// ─────────────────────────────────────────────
+function updateChartUG(data) {
+  destroyChart('ug');
+  const ugFilter = document.getElementById('selUG').value;
+  const ugSumsAll = {};
+  RAW.forEach(r => { if(r.nomeUG) ugSumsAll[r.nomeUG] = (ugSumsAll[r.nomeUG]||0) + r.valor; });
+  const sortedAll = Object.entries(ugSumsAll).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const ugSumsFiltered = {};
+  data.forEach(r => { if(r.nomeUG) ugSumsFiltered[r.nomeUG] = (ugSumsFiltered[r.nomeUG]||0) + r.valor; });
+  const labelsRaw = sortedAll.map(([n]) => n).reverse();
+  const labels = labelsRaw.map(n => n.length > 40 ? n.substring(0,38)+'…' : n);
+  const vals = labelsRaw.map(n => ugSumsFiltered[n] || 0);
+
+  const isLight = document.documentElement.classList.contains('light');
+  const accentColor = isLight ? '#2472c8' : '#378ADD';
+  const selColor    = isLight ? '#1a5fb4' : '#a0d4ff';
+  const dimColor    = isLight ? 'rgba(36,114,200,0.25)' : 'rgba(24,95,165,0.3)';
+  const bgColors = labelsRaw.map(n => {
+    if (ugFilter !== 'all') return ugFilter === n ? selColor : dimColor;
+    return accentColor;
+  });
+
+  const CD = chartDefaults();
+  charts.ug = new Chart(document.getElementById('chartUG'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: vals, backgroundColor: bgColors, borderRadius: 3, borderSkipped: false, hoverBackgroundColor: selColor }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      onClick(evt, elements) {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const ugName = labelsRaw[idx];
+        applyFilter('selUG', ugName);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => fmt(c.parsed.x), title: t => { const n = labelsRaw[t[0].dataIndex]; return (n.length>40?n.substring(0,38)+'…':n) + (ugFilter===n?' ✓ Ativo':''); } } }
+      },
+      scales: {
+        x: { ticks: { callback: v => fmtShort(v), color: CD.color, font: CD.tickFont }, grid: { color: CD.gridColor } },
+        y: { ticks: { color: CD.color, font: CD.tickFont }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// CHART: MENSAL POR TIPO (stacked)
+// ─────────────────────────────────────────────
+function updateChartMesTipo(data) {
+  destroyChart('mesTipo');
+  const mesFilter  = document.getElementById('selMes').value;
+  const tipoFilter = document.getElementById('selTipo').value;
+
+  // Axes always from RAW for stability
+  const allTipos = [...new Set(RAW.map(r=>r.tipo).filter(Boolean))];
+  const allMeses = [...new Set(RAW.map(r=>r.mes).filter(Boolean))].sort((a,b)=>a-b);
+  const palette = ['#378ADD','#EF9F27','#a78bfa','#4caf87','#e05a6b'];
+
+  const datasets = allTipos.map((tipo, ti) => {
+    const base = palette[ti % palette.length];
+    const dimmed = tipoFilter !== 'all' && tipoFilter !== tipo;
+    const vals = allMeses.map(m => data.filter(r=>r.mes===m&&r.tipo===tipo).reduce((s,r)=>s+r.valor,0));
+    return {
+      label: tipo,
+      data: vals,
+      backgroundColor: dimmed ? base+'55' : base,
+      borderRadius: 3,
+      borderSkipped: false,
+    };
+  });
+
+  const CD = chartDefaults();
+  charts.mesTipo = new Chart(document.getElementById('chartMesTipo'), {
+    type: 'bar',
+    data: { labels: allMeses.map(m => MONTHS[m]||m), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      onClick(evt, elements) {
+        if (!elements.length) return;
+        const mesIdx  = elements[0].index;
+        const tipoIdx = elements[0].datasetIndex;
+        const m    = allMeses[mesIdx];
+        const tipo = allTipos[tipoIdx];
+        // If both already filtered, clear both; else set both
+        const mesEl  = document.getElementById('selMes');
+        const tipoEl = document.getElementById('selTipo');
+        if (mesEl.value === String(m) && tipoEl.value === tipo) {
+          mesEl.value = 'all'; tipoEl.value = 'all';
+        } else {
+          mesEl.value  = String(m);
+          tipoEl.value = tipo;
+        }
+        updateAll();
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: CD.color, font: CD.tickFont, boxWidth: 12, padding: 12 },
+          onClick(e, item) {
+            // Clicking legend item filters by tipo
+            applyFilter('selTipo', item.text);
+          }
+        },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: CD.color, font: CD.tickFont } },
+        y: { stacked: true, ticks: { callback: v => fmtShort(v), color: CD.color, font: CD.tickFont }, grid: { color: CD.gridColor } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
+// TABLES
+// ─────────────────────────────────────────────
+function updateCredorTable(data) {
+  const grand = data.reduce((s,r) => s+r.valor, 0);
+  const credorMap = {};
+  data.forEach(r => {
+    if (!r.nomeCredor) return;
+    if (!credorMap[r.nomeCredor]) credorMap[r.nomeCredor] = { tipo: r.tipo, valor: 0, cpf: r.cpfCnpj };
+    credorMap[r.nomeCredor].valor += r.valor;
+  });
+  const sorted = Object.entries(credorMap).sort((a,b)=>b[1].valor-a[1].valor).slice(0,20);
+
+  document.getElementById('tableCount').textContent = `Total filtrado: ${fmt(grand)}`;
+  document.getElementById('credorBody').innerHTML = sorted.map(([nome, info], i) => {
+    const pct = grand ? (info.valor/grand*100).toFixed(1) : '0.0';
+    const badgeClass = info.tipo.includes('Contrato') ? 'tipo-contrato' : info.tipo.includes('Execu') ? 'tipo-oes' : 'tipo-ac';
+    const badgeLabel = info.tipo.includes('Contrato') ? 'Contrato' : info.tipo.includes('Execu') ? 'OES' : 'A.Compra';
+    return `<tr>
+      <td><span class="rank-num">${i+1}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nome}">${nome}</td>
+      <td style="color:var(--text-secondary);font-size:11px">${info.cpf}</td>
+      <td><span class="tipo-badge ${badgeClass}">${badgeLabel}</span></td>
+      <td style="font-weight:600;white-space:nowrap">${fmt(info.valor)}</td>
+      <td style="color:var(--text-secondary)">${pct}%</td>
+      <td><div class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100,pct)}%"></div></div><span style="font-size:10px;color:var(--text-tertiary);min-width:30px">${pct}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateGrupoTable(data) {
+  const grand = data.reduce((s,r) => s+r.valor, 0);
+  const grupoElemMap = {};
+  data.forEach(r => {
+    const key = `${r.grupoDesc}||${r.elemDesc}`;
+    if (!grupoElemMap[key]) grupoElemMap[key] = { grupo: r.grupoDesc, elem: r.elemDesc, qtd: 0, valor: 0 };
+    grupoElemMap[key].qtd++;
+    grupoElemMap[key].valor += r.valor;
+  });
+  const sorted = Object.values(grupoElemMap).sort((a,b)=>b.valor-a.valor);
+
+  document.getElementById('grupoBody').innerHTML = sorted.map(g => {
+    const pct = grand ? (g.valor/grand*100).toFixed(1) : '0.0';
+    return `<tr>
+      <td style="max-width:220px">${g.grupo}</td>
+      <td style="max-width:200px">${g.elem}</td>
+      <td style="color:var(--text-secondary)">${g.qtd.toLocaleString('pt-BR')}</td>
+      <td style="font-weight:600">${fmt(g.valor)}</td>
+      <td><div class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100,pct)}%"></div></div><span style="font-size:10px;color:var(--text-tertiary);min-width:30px">${pct}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// RECORDS TABLE
+// ─────────────────────────────────────────────
+function renderRecords() {
+  const data = filtered();
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const filtered2 = q ? data.filter(r =>
+    r.nomeCredor.toLowerCase().includes(q) ||
+    r.nomeUG.toLowerCase().includes(q) ||
+    r.historico.toLowerCase().includes(q) ||
+    r.numLIQ.toLowerCase().includes(q)
+  ) : data;
+
+  const total = filtered2.length;
+  const pages = Math.ceil(total / REC_PER_PAGE) || 1;
+  if (recPage > pages) recPage = 1;
+  const start = (recPage - 1) * REC_PER_PAGE;
+  const slice = filtered2.slice(start, start + REC_PER_PAGE);
+
+  document.getElementById('recCount').textContent = `${total.toLocaleString('pt-BR')} registros`;
+  document.getElementById('pageInfo').textContent = `${recPage}/${pages}`;
+  document.getElementById('btnPrev').disabled = recPage <= 1;
+  document.getElementById('btnNext').disabled = recPage >= pages;
+
+  document.getElementById('recBody').innerHTML = slice.map(r => {
+    const badgeClass = r.tipo.includes('Contrato') ? 'tipo-contrato' : r.tipo.includes('Execu') ? 'tipo-oes' : 'tipo-ac';
+    const badgeLabel = r.tipo.includes('Contrato') ? 'Contrato' : r.tipo.includes('Execu') ? 'OES' : 'A.Compra';
+    const hist = r.historico.length > 60 ? r.historico.substring(0,58)+'…' : r.historico;
+    return `<tr>
+      <td>${MONTHS[r.mes]||r.mes||'—'}</td>
+      <td style="white-space:nowrap;font-size:11px">${r.dataLIQ}</td>
+      <td style="font-size:10px;color:var(--text-tertiary)">${r.numLIQ}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.nomeUG}">${r.nomeUG}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.nomeCredor}">${r.nomeCredor}</td>
+      <td><span class="tipo-badge ${badgeClass}">${badgeLabel}</span></td>
+      <td style="font-size:10px;color:var(--text-secondary)">${r.grupoDesc.substring(0,6)||'—'}</td>
+      <td style="font-size:10px;color:var(--text-secondary)">${r.elemDesc.substring(0,6)||'—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text-secondary)" title="${r.historico}">${hist}</td>
+      <td style="text-align:right;font-weight:600;white-space:nowrap">${fmt(r.valor)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function changePage(dir) {
+  recPage += dir;
+  renderRecords();
+}
+
+// ─────────────────────────────────────────────
+// UPDATE ALL
+// ─────────────────────────────────────────────
+function updateAll() {
+  recPage = 1;
+  const data = filtered();
+  updateMetrics(data);
+  updateChartMes(data);
+  updateChartTipo(data);
+  updateChartUG(data);
+  updateChartMesTipo(data);
+  updateCredorTable(data);
+  updateGrupoTable(data);
+  renderRecords();
+  renderChips();
+}
+
+// ─────────────────────────────────────────────
+// RESET
+// ─────────────────────────────────────────────
+function resetApp() {
+  RAW = [];
+  charts = {};
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('headerActions').style.display = 'none';
+  document.getElementById('uploadZone').style.display = 'flex';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('loadingBar').style.display = 'none';
+  showError('');
+}
+
+// ─────────────────────────────────────────────
+// THEME TOGGLE
+// ─────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isLight = html.classList.toggle('light');
+  const label = document.getElementById('themeLabel');
+  const thumb = document.getElementById('themeThumb');
+  if (isLight) {
+    label.textContent = '☀️ Light';
+    thumb.textContent = '☀️';
+  } else {
+    label.textContent = '🌙 Dark';
+    thumb.textContent = '🌙';
+  }
+  // Persist preference
+  localStorage.setItem('pmba-theme', isLight ? 'light' : 'dark');
+  // Redraw charts with new colors if data loaded
+  if (RAW.length > 0) updateAll();
+}
+
+// Apply saved theme on load
+(function() {
+  const saved = localStorage.getItem('pmba-theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('themeLabel').textContent = '☀️ Light';
+    document.getElementById('themeThumb').textContent = '☀️';
+  }
+})();
+</script>
+</body>
+</html>
