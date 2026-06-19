@@ -494,6 +494,13 @@
     </div>
     <div class="filter-sep"></div>
     <div class="filter-group">
+      <label>Elemento</label>
+      <select id="selElemento" onchange="updateAll()">
+        <option value="all">Todos</option>
+      </select>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="filter-group">
       <label>UG</label>
       <select id="selUG" onchange="updateAll()">
         <option value="all">Todas</option>
@@ -815,6 +822,7 @@ function buildFilters() {
   const meses = [...new Set(RAW.map(r=>r.mes).filter(Boolean))].sort((a,b)=>a-b);
   const tipos = [...new Set(RAW.map(r=>r.tipo).filter(Boolean))].sort();
   const grupos = [...new Set(RAW.map(r=>r.grupoDesc).filter(Boolean))].sort();
+  const elementos = [...new Set(RAW.map(r=>r.elemDesc).filter(Boolean))].sort();
   const ugs = [...new Set(RAW.map(r=>r.nomeUG).filter(Boolean))].sort();
 
   const selMes = document.getElementById('selMes');
@@ -829,13 +837,17 @@ function buildFilters() {
   selGrupo.innerHTML = '<option value="all">Todos</option>';
   grupos.forEach(g => selGrupo.insertAdjacentHTML('beforeend', `<option value="${g}">${g}</option>`));
 
+  const selElemento = document.getElementById('selElemento');
+  selElemento.innerHTML = '<option value="all">Todos</option>';
+  elementos.forEach(e => selElemento.insertAdjacentHTML('beforeend', `<option value="${e}">${e}</option>`));
+
   const selUG = document.getElementById('selUG');
   selUG.innerHTML = '<option value="all">Todas</option>';
   ugs.forEach(u => selUG.insertAdjacentHTML('beforeend', `<option value="${u}">${u}</option>`));
 }
 
 function resetFilters() {
-  ['selMes','selTipo','selGrupo','selUG'].forEach(id => document.getElementById(id).value = 'all');
+  ['selMes','selTipo','selGrupo','selElemento','selUG'].forEach(id => document.getElementById(id).value = 'all');
   document.getElementById('searchInput').value = '';
   updateAll();
 }
@@ -848,6 +860,7 @@ function getFilters() {
     mes: document.getElementById('selMes').value,
     tipo: document.getElementById('selTipo').value,
     grupo: document.getElementById('selGrupo').value,
+    elemento: document.getElementById('selElemento').value,
     ug: document.getElementById('selUG').value,
   };
 }
@@ -859,6 +872,7 @@ function filtered(data) {
     if (f.mes !== 'all' && String(r.mes) !== f.mes) return false;
     if (f.tipo !== 'all' && r.tipo !== f.tipo) return false;
     if (f.grupo !== 'all' && r.grupoDesc !== f.grupo) return false;
+    if (f.elemento !== 'all' && r.elemDesc !== f.elemento) return false;
     if (f.ug !== 'all' && r.nomeUG !== f.ug) return false;
     return true;
   });
@@ -950,12 +964,12 @@ function chartDefaults() {
 // ─────────────────────────────────────────────
 // ACTIVE CHIPS (filter pills above charts)
 // ─────────────────────────────────────────────
-const CHIP_LABELS = { selMes: 'Mês', selTipo: 'Tipo', selGrupo: 'Grupo', selUG: 'UG' };
+const CHIP_LABELS = { selMes: 'Mês', selTipo: 'Tipo', selGrupo: 'Grupo', selElemento: 'Elemento', selUG: 'UG' };
 
 function renderChips() {
   const container = document.getElementById('activeChips');
   if (!container) return;
-  const ids = ['selMes','selTipo','selGrupo','selUG'];
+  const ids = ['selMes','selTipo','selGrupo','selElemento','selUG'];
   container.innerHTML = ids.map(id => {
     const sel = document.getElementById(id);
     if (!sel || sel.value === 'all') return '';
