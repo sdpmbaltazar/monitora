@@ -1225,8 +1225,8 @@
         document.getElementById('dashSub').innerHTML = `Arquivo: <strong>${fileName}</strong> · Planilha: <strong>${sheetName}</strong> · <strong id="totalLiq">${dados.length.toLocaleString('pt-BR')}</strong> registros <span style="color: #4ade80; margin-left: 8px;">(✓ Sincronizado)</span>`;
       } catch (err) {
         console.error("Erro no Supabase:", err);
-        showError("Falha ao sincronizar com banco de dados: " + err.message);
-        document.getElementById('dashSub').innerHTML = `Arquivo: <strong>${fileName}</strong> · Planilha: <strong>${sheetName}</strong> · <strong id="totalLiq">${dados.length.toLocaleString('pt-BR')}</strong> registros <span style="color: #ef4444; margin-left: 8px;">(Erro ao sincronizar)</span>`;
+        const erroMsg = err.message || err.error_description || JSON.stringify(err);
+        document.getElementById('dashSub').innerHTML = `Arquivo: <strong>${fileName}</strong> · Planilha: <strong>${sheetName}</strong> · <strong id="totalLiq">${dados.length.toLocaleString('pt-BR')}</strong> registros <span style="color: #ef4444; margin-left: 8px;">(Erro: ${erroMsg})</span>`;
       }
     }
 
