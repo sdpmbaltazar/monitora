@@ -757,18 +757,27 @@ function parseData(rows, sheetName, fileName) {
     // Normalize Autorização
     if (tipoInstr.includes('Autoriza')) tipoInstr = 'Autorização de Compra';
 
+    const nomeUG = (r[colMap.nomeUG] || '').toString().trim();
+    const nomeCredor = (r[colMap.nomeCredor] || '').toString().trim();
+    const numLIQ = (r[colMap.numLIQ] || '').toString().trim();
+
+    // Skip rows that are clearly totals or empty artifacts (no UG, no Credor, no NumLIQ)
+    if (!nomeUG && !nomeCredor && !numLIQ) {
+      continue;
+    }
+
     RAW.push({
       mes,
-      nomeUG: (r[colMap.nomeUG] || '').toString().trim(),
+      nomeUG,
       tipo: tipoInstr,
       grupoCod: grupoCode,
       grupoDesc: grupoRaw.trim(),
       elemCod: elemCode,
       elemDesc: elemRaw.trim(),
       valor,
-      nomeCredor: (r[colMap.nomeCredor] || '').toString().trim(),
+      nomeCredor,
       cpfCnpj: (r[colMap.cpfCnpj] || '').toString().trim(),
-      numLIQ: (r[colMap.numLIQ] || '').toString().trim(),
+      numLIQ,
       dataLIQ: r[colMap.dataLIQ] ? formatDate(parseDate(r[colMap.dataLIQ])) : '',
       historico: (r[colMap.historico] || '').toString().trim(),
     });
