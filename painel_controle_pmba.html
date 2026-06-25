@@ -968,7 +968,7 @@
       </button>
       <div id="headerActions" style="display:none;">
         <button class="btn-upload-new" onclick="resetApp()" id="btnNew">
-          📂 Novo arquivo
+          📥 Importar Planilha
         </button>
       </div>
     </div>
@@ -1229,6 +1229,66 @@
         document.getElementById('dashSub').innerHTML = `Arquivo: <strong>${fileName}</strong> · Planilha: <strong>${sheetName}</strong> · <strong id="totalLiq">${dados.length.toLocaleString('pt-BR')}</strong> registros <span style="color: #ef4444; margin-left: 8px;">(Erro: ${erroMsg})</span>`;
       }
     }
+
+    async function carregarSupabase() {
+      const uploadZone = document.getElementById('uploadZone');
+      if (uploadZone) uploadZone.style.display = 'flex';
+      document.getElementById('loadingBar').style.display = 'block';
+      const label = document.querySelector('.upload-sub');
+      const originalLabel = label ? label.innerText : '';
+      if (label) label.innerText = "Conectando ao banco de dados Supabase...";
+      
+      try {
+        const { data, error } = await supabaseClient
+          .from('liquidacoes')
+          .select('*')
+          .order('id', { ascending: true }); // Ensure deterministic order
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          RAW = data.map(r => ({
+            mes: r.mes,
+            nomeUG: r.nome_ug,
+            tipo: r.tipo,
+            grupoCod: r.grupo_cod,
+            grupoDesc: r.grupo_desc,
+            elemCod: r.elem_cod,
+            elemDesc: r.elem_desc,
+            valor: parseFloat(r.valor) || 0,
+            nomeCredor: r.nome_credor,
+            cpfCnpj: r.cpf_cnpj,
+            numLIQ: r.num_liq,
+            dataLIQ: r.data_liq,
+            historico: r.historico
+          }));
+          
+          document.getElementById('loadingBar').style.display = 'none';
+          document.getElementById('uploadZone').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          document.getElementById('headerActions').style.display = 'flex';
+          document.getElementById('dashboard').classList.add('fade-in');
+          
+          buildFilters();
+          document.getElementById('totalLiq').textContent = RAW.length.toLocaleString('pt-BR');
+          document.getElementById('dashSub').innerHTML = `Dados Carregados do <strong>Banco de Dados</strong> · <strong id="totalLiq">${RAW.length.toLocaleString('pt-BR')}</strong> registros <span style="color: #4ade80; margin-left: 8px;">(✓ Nuvem)</span>`;
+          
+          updateAll();
+        } else {
+          // No data in DB, just show the normal upload screen
+          document.getElementById('loadingBar').style.display = 'none';
+          if (label) label.innerText = originalLabel;
+        }
+      } catch (err) {
+        console.error("Erro ao carregar do Supabase:", err);
+        document.getElementById('loadingBar').style.display = 'none';
+        if (label) label.innerText = originalLabel;
+        // showError is available
+        showError("Não foi possível carregar os dados da nuvem. Você pode importar manualmente.");
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarSupabase);
 
     const MONTHS = { 1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr', 5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez' };
 
