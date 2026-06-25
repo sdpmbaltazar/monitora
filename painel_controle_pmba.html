@@ -1262,7 +1262,7 @@
             numLIQ: r.num_liq,
             dataLIQ: r.data_liq,
             historico: r.historico
-          }));
+          })).filter(r => r.numLIQ.length >= 3 && r.nomeCredor.length >= 3);
           
           document.getElementById('loadingBar').style.display = 'none';
           document.getElementById('uploadZone').style.display = 'none';
@@ -1429,8 +1429,8 @@
         const nomeCredor = (r[colMap.nomeCredor] || '').toString().trim();
         const numLIQ = (r[colMap.numLIQ] || '').toString().trim();
 
-        // Skip rows that are clearly totals or empty artifacts (no UG, no Credor, no NumLIQ)
-        if (!nomeUG && !nomeCredor && !numLIQ) {
+        // Skip rows that are clearly totals or empty artifacts (e.g. phantom characters)
+        if (numLIQ.length < 3 || nomeCredor.length < 3) {
           continue;
         }
 
