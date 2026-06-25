@@ -1929,6 +1929,7 @@
       const grand = data.reduce((s, r) => s + r.valor, 0);
       const grupoElemMap = {};
       data.forEach(r => {
+        if (!r.grupoDesc && !r.elemDesc) return;
         const key = `${r.grupoDesc}||${r.elemDesc}`;
         if (!grupoElemMap[key]) grupoElemMap[key] = { grupo: r.grupoDesc, elem: r.elemDesc, qtd: 0, valor: 0 };
         grupoElemMap[key].qtd++;
